@@ -10,26 +10,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
 
-  // 화면이 켜질 때 DB 장부에서 상품 목록을 가져옵니다.
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("id", { ascending: false }); // 최신순 정렬 (에러 났던 부분 빼고 기본 순서로 가져오게 설정할 수도 있지만, 일단 DB대로 가져옵니다)
-      
-      // 만약 id 에러가 났다면 아래 코드로 가져옵니다 (정렬 뺌)
-      // const { data, error } = await supabase.from("products").select("*");
-
-      if (data) {
-        setProducts(data);
-      }
-    };
-    
-    // (안전장치) id 컬럼이 없어서 에러가 났었으니, 정렬을 뺀 버전으로 안전하게 가져옵니다.
+    // 안전하게 정렬 없이 상품을 가져오는 함수
     const fetchProductsSafely = async () => {
       const { data, error } = await supabase.from("products").select("*");
-      if (data) setProducts(data);
+      if (data) setProducts(data.reverse()); // 최신 상품이 위로 오도록 뒤집기
     };
 
     fetchProductsSafely();
@@ -41,19 +26,34 @@ export default function Home() {
       {/* 1. 쇼핑몰 상단 헤더 */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="text-2xl font-black text-blue-600 tracking-tighter">
+          {/* 로고 */}
+          <div className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer">
             HITPANG<span className="text-gray-800">FISHING</span>
           </div>
+          
+          {/* 중앙 메뉴 */}
           <nav className="hidden md:flex space-x-8 font-semibold text-gray-600">
             <a href="#" className="hover:text-blue-600 transition">베스트</a>
             <a href="#" className="hover:text-blue-600 transition">낚싯대</a>
             <a href="#" className="hover:text-blue-600 transition">릴</a>
             <a href="#" className="hover:text-blue-600 transition">채비/소품</a>
           </nav>
-          <div className="flex items-center space-x-4">
-            <a href="/admin" className="text-sm text-gray-400 hover:text-gray-600">관리자</a>
-            <button className="bg-blue-600 text-white px-5 py-2 rounded-full font-bold hover:bg-blue-700 transition">
-              장바구니 (0)
+          
+          {/* 🌟 수정된 부분: 우측 상단 메뉴 (로그인, 회원가입, 관리자, 장바구니) */}
+          <div className="flex items-center space-x-4 md:space-x-5">
+            <div className="hidden sm:flex items-center space-x-4 text-sm font-semibold text-gray-500">
+              <a href="#" className="hover:text-blue-600 transition">로그인</a>
+              <a href="#" className="hover:text-blue-600 transition">회원가입</a>
+              <span className="text-gray-300">|</span>
+              <a href="/admin" className="hover:text-blue-600 transition">관리자</a>
+            </div>
+            
+            {/* 장바구니 버튼 (카트 아이콘 추가) */}
+            <button className="bg-blue-600 text-white px-5 py-2.5 rounded-full font-bold hover:bg-blue-700 transition flex items-center space-x-2 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+              </svg>
+              <span>장바구니 (0)</span>
             </button>
           </div>
         </div>
@@ -78,20 +78,18 @@ export default function Home() {
             아직 진열된 상품이 없습니다. <br/>관리자 페이지에서 첫 상품을 등록해 보세요!
           </div>
         ) : (
-          /* 상품 카드 그리드 (자동으로 줄바꿈 됨) */
+          /* 상품 카드 그리드 */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {products.map((product, index) => (
               <div key={index} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden group cursor-pointer border border-gray-100">
                 
                 {/* 상품 이미지 */}
                 <div className="aspect-square bg-gray-100 overflow-hidden relative">
-                  {/* 이미지가 없으면 회색 네모를, 있으면 진짜 이미지를 보여줍니다 */}
                   {product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">이미지 준비중</div>
                   )}
-                  {/* 카테고리 뱃지 */}
                   <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-blue-700 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                     {product.category}
                   </span>

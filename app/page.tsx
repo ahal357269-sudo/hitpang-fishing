@@ -11,10 +11,9 @@ export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    // 안전하게 정렬 없이 상품을 가져오는 함수
     const fetchProductsSafely = async () => {
       const { data, error } = await supabase.from("products").select("*");
-      if (data) setProducts(data.reverse()); // 최신 상품이 위로 오도록 뒤집기
+      if (data) setProducts(data.reverse()); 
     };
 
     fetchProductsSafely();
@@ -26,10 +25,10 @@ export default function Home() {
       {/* 1. 쇼핑몰 상단 헤더 */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          {/* 로고 */}
-          <div className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer">
+          {/* 로고 (클릭 시 메인으로) */}
+          <a href="/" className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer">
             HITPANG<span className="text-gray-800">FISHING</span>
-          </div>
+          </a>
           
           {/* 중앙 메뉴 */}
           <nav className="hidden md:flex space-x-8 font-semibold text-gray-600">
@@ -39,16 +38,17 @@ export default function Home() {
             <a href="#" className="hover:text-blue-600 transition">채비/소품</a>
           </nav>
           
-          {/* 🌟 수정된 부분: 우측 상단 메뉴 (로그인, 회원가입, 관리자, 장바구니) */}
+          {/* 🌟 수정된 부분: 길(링크)을 제대로 연결했습니다! */}
           <div className="flex items-center space-x-4 md:space-x-5">
             <div className="hidden sm:flex items-center space-x-4 text-sm font-semibold text-gray-500">
-              <a href="#" className="hover:text-blue-600 transition">로그인</a>
-              <a href="#" className="hover:text-blue-600 transition">회원가입</a>
+              {/* href="/login" 과 href="/signup" 으로 진짜 페이지와 연결! */}
+              <a href="/login" className="hover:text-blue-600 transition">로그인</a>
+              <a href="/signup" className="hover:text-blue-600 transition">회원가입</a>
               <span className="text-gray-300">|</span>
               <a href="/admin" className="hover:text-blue-600 transition">관리자</a>
             </div>
             
-            {/* 장바구니 버튼 (카트 아이콘 추가) */}
+            {/* 장바구니 버튼 */}
             <button className="bg-blue-600 text-white px-5 py-2.5 rounded-full font-bold hover:bg-blue-700 transition flex items-center space-x-2 shadow-sm">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
@@ -83,7 +83,6 @@ export default function Home() {
             {products.map((product, index) => (
               <div key={index} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden group cursor-pointer border border-gray-100">
                 
-                {/* 상품 이미지 */}
                 <div className="aspect-square bg-gray-100 overflow-hidden relative">
                   {product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -95,7 +94,6 @@ export default function Home() {
                   </span>
                 </div>
 
-                {/* 상품 정보 */}
                 <div className="p-5">
                   <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
                   <div className="flex justify-between items-center mt-4">

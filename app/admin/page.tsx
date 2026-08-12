@@ -2,58 +2,107 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// 1. 사장님의 진짜 주소와 키 (그대로 유지)
 const supabaseUrl = "https://dsnxztxebcotganfqrlf.supabase.co";
 const supabaseKey = "sb_publishable_kPRuJ1MnftzY9ZFw1kAp6Q_lwi-GZ3M";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// 🚨 사장님의 진짜 이메일 주소를 완벽하게 장착했습니다!
+const ADMIN_EMAIL = "swn1212@naver.com"; 
+
 export default function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
-  
   const [category, setCategory] = useState("릴");
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
-  // 2. 수파베이스 장부에서 상품 가져오기 (정렬 조건 삭제 완료!)
-  const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*"); // 👈 말썽을 피우던 .order("id", ...) 정렬 코드를 삭제했습니다!
-    
-    if (error) {
-      alert("앗, 목록을 불러오지 못했습니다: " + error.message);
-    }
-    
-    if (data) {
-      setProducts(data);
-    }
-  };
+  const [authStatus, setAuthStatus] = useState("loading"); // loading, no_login, fail, success
+  const [currentEmail, setCurrentEmail] = useState("");
 
   useEffect(() => {
-    fetchProducts();
+    const checkAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setAuthStatus("no_login");
+        return;
+      }
+
+      const userEmail = session.user.email;
+      setCurrentEmail(userEmail || "");
+
+      if (userEmail?.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
+        setAuthStatus("fail"); 
+        return;
+      }
+
+      setAuthStatus("success");
+      fetchProducts();
+    };
+
+    checkAdmin();
   }, []);
 
-  // 3. 상품 등록 기능
+  const fetchProducts = async () => {
+    const { data } = await supabase.from("products").select("*");
+    if (data) setProducts(data.reverse());
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const { error } = await supabase
-      .from("products")
-      .insert([
-        { category: category, name: name, price: price, image_url: imageUrl }
-      ]);
+    const { error } = await supabase.from("products").insert([
+      { category, name, price, image_url: imageUrl }
+    ]);
 
-    if (error) {
-      alert("앗, 등록 중 에러가 났습니다: " + error.message);
-    } else {
-      alert("신상품이 DB 장부에 성공적으로 등록되었습니다! 🎉");
-      setName("");
-      setPrice("");
-      setImageUrl("");
+    if (error) alert("앗, 에러: " + error.message);
+    else {
+      alert("등록 완료! 🎉");
+      setName(""); setPrice(""); setImageUrl("");
       fetchProducts(); 
     }
   };
+
+
+  if (authStatus === "loading") {
+    return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500 bg-gray-50">🔐 신원 확인 중... 자물쇠를 풀고 있습니다.</div>;
+  }
+
+  if (authStatus === "no_login") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 space-y-4">
+        <div className="text-5xl">🚫</div>
+        <div className="text-xl font-bold text-gray-800">관리자 전용 구역입니다.</div>
+        <p className="text-gray-500">먼저 사장님 계정으로 로그인해 주세요.</p>
+        <a href="/login" className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-blue-700 transition">로그인하러 가기</a>
+      </div>
+    );
+  }
+
+  if (authStatus === "fail") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center">
+        <div className="text-5xl mb-4">🚨</div>
+        <h2 className="text-2xl font-black text-red-600 mb-6">접근 거부: 관리자가 아닙니다!</h2>
+        
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-left max-w-md w-full">
+          <p className="text-gray-500 mb-1 text-sm">현재 로그인하신 이메일</p>
+          <p className="font-bold text-gray-800 text-lg mb-4">{currentEmail}</p>
+          
+          <p className="text-gray-500 mb-1 text-sm">코드에 적어둔 사장님 이메일</p>
+          <p className="font-bold text-blue-600 text-lg">{ADMIN_EMAIL}</p>
+          
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <p className="text-xs text-red-500 font-semibold">* 위 두 이메일 주소가 단 한 글자라도 다르면 자물쇠가 열리지 않습니다.</p>
+          </div>
+        </div>
+
+        <div className="flex space-x-4 mt-8">
+          <a href="/" className="bg-gray-800 text-white font-bold px-6 py-3 rounded-xl hover:bg-black transition">메인 화면으로 가기</a>
+          <button onClick={async () => { await supabase.auth.signOut(); window.location.href='/login'; }} className="bg-white border border-gray-300 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition">다른 계정으로 다시 로그인</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans">
@@ -78,18 +127,12 @@ export default function AdminPage() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* 상품 등록 폼 */}
           <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
             <h2 className="text-xl font-bold mb-4 border-b pb-2">✨ 신상품 등록</h2>
             <form className="space-y-4" onSubmit={handleAddProduct}>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">상품 카테고리</label>
-                <select 
-                  value={category} 
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                >
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600">
                   <option>낚싯대</option>
                   <option>릴</option>
                   <option>루어/채비</option>
@@ -99,35 +142,15 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">상품명</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="예: 시마노 스텔라 SW" 
-                  required 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" 
-                />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 시마노 스텔라 SW" required className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">판매 가격 (원)</label>
-                <input 
-                  type="text" 
-                  value={price} 
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="예: 1,250,000" 
-                  required 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" 
-                />
+                <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="예: 1,250,000" required className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">상품 이미지 (URL)</label>
-                <input 
-                  type="text" 
-                  value={imageUrl} 
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://..." 
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" 
-                />
+                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
               <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition mt-4">
                 상품 등록하기
@@ -135,7 +158,6 @@ export default function AdminPage() {
             </form>
           </div>
 
-          {/* 등록된 상품 목록 */}
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
             <h2 className="text-xl font-bold mb-4 border-b pb-2">📋 등록된 상품 목록</h2>
             <div className="overflow-x-auto">
@@ -150,9 +172,7 @@ export default function AdminPage() {
                 <tbody>
                   {products.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-8 text-center text-gray-400">
-                        아직 등록된 상품이 없습니다. 왼쪽에서 첫 상품을 등록해 보세요!
-                      </td>
+                      <td colSpan={3} className="p-8 text-center text-gray-400">아직 등록된 상품이 없습니다.</td>
                     </tr>
                   ) : (
                     products.map((product, index) => (
@@ -167,7 +187,6 @@ export default function AdminPage() {
               </table>
             </div>
           </div>
-
         </div>
       </main>
     </div>

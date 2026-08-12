@@ -1,53 +1,80 @@
+"use client";
+import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
+// 수파베이스 장부 및 금고 연결!
+const supabaseUrl = "https://dsnxztxebcotganfqrlf.supabase.co";
+const supabaseKey = "sb_publishable_kPRuJ1MnftzY9ZFw1kAp6Q_lwi-GZ3M";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter(); // 페이지 이동 도구
+
+  // '로그인' 버튼을 눌렀을 때 실행되는 코드
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 수파베이스 금고에서 이메일과 비밀번호가 맞는지 확인합니다.
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) {
+      alert("앗, 로그인에 실패했습니다: 아이디나 비밀번호를 다시 확인해 주세요!");
+    } else {
+      alert("로그인 성공! 환영합니다. 🎉");
+      // 로그인 성공 시 쇼핑몰 메인 화면으로 이동합니다.
+      router.push("/"); 
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center font-sans p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 md:p-10 border border-gray-100">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         
-        {/* 로고 및 환영 인사 */}
         <div className="text-center mb-8">
-          <a href="/" className="text-4xl font-black text-blue-600 tracking-tighter hover:text-blue-800 transition">
-            히트팡피싱
+          <a href="/" className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer">
+            HITPANG<span className="text-gray-800">FISHING</span>
           </a>
-          <p className="text-gray-500 mt-3 text-sm">프리미엄 낚시 쇼핑몰에 오신 것을 환영합니다.</p>
+          <h2 className="text-xl font-bold text-gray-800 mt-4">로그인</h2>
+          <p className="text-gray-500 text-sm mt-2">다시 오신 것을 환영합니다!</p>
         </div>
-        
-        {/* 로그인 폼 */}
-        <form className="space-y-5">
+
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">아이디 (이메일)</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">이메일 (아이디)</label>
             <input 
               type="email" 
-              placeholder="example@hitpang.com" 
-              className="w-full border border-gray-300 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-600 transition" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="가입하신 이메일을 입력하세요" 
+              required 
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 transition" 
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">비밀번호</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
             <input 
               type="password" 
-              placeholder="비밀번호를 입력해주세요" 
-              className="w-full border border-gray-300 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-600 transition" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호를 입력하세요" 
+              required 
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 transition" 
             />
           </div>
           
-          {/* 자동 로그인 & 비밀번호 찾기 */}
-          <div className="flex justify-between items-center text-sm mt-2">
-            <label className="flex items-center text-gray-600 cursor-pointer">
-              <input type="checkbox" className="mr-2 w-4 h-4 text-blue-600 rounded border-gray-300" />
-              로그인 상태 유지
-            </label>
-            <a href="#" className="text-gray-500 hover:text-blue-600">비밀번호 찾기</a>
-          </div>
-          
-          <button className="w-full bg-blue-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-blue-700 transition shadow-md mt-6">
-            로그인
+          <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition mt-2 shadow-sm">
+            로그인하기
           </button>
         </form>
-        
-        {/* 회원가입 유도 */}
-        <div className="mt-8 text-center text-sm text-gray-500 border-t pt-6">
-          아직 히트팡피싱 회원이 아니신가요? <br className="md:hidden" />
-          <a href="/signup" className="text-blue-600 font-bold hover:underline ml-1">회원가입 하기</a>
+
+        <div className="mt-6 text-center text-sm text-gray-600">
+          아직 계정이 없으신가요? <a href="/signup" className="text-blue-600 font-bold hover:underline">회원가입하기</a>
         </div>
 
       </div>

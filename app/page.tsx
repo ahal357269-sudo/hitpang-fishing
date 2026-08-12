@@ -6,6 +6,9 @@ const supabaseUrl = "https://dsnxztxebcotganfqrlf.supabase.co";
 const supabaseKey = "sb_publishable_kPRuJ1MnftzY9ZFw1kAp6Q_lwi-GZ3M";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// 🌟 사장님(관리자) 이메일을 여기에 등록해 둡니다! (여러 명이면 쉼표로 추가 가능)
+const ADMIN_EMAILS = ["swn1212@naver.com"];
+
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -35,7 +38,6 @@ export default function Home() {
       }
     };
 
-    // 🌟 [핵심 보완] 메모장 불러오는 기능을 튼튼하게 만들었습니다
     const loadLocalData = () => {
       try {
         const existingCart = localStorage.getItem("hitpang_cart");
@@ -53,11 +55,8 @@ export default function Home() {
 
     fetchProductsSafely();
     checkUserAndLikes();
-    
-    // 처음에 한 번 불러오고
     loadLocalData();
 
-    // 🌟 뒤로가기로 메인에 왔을 때나 마우스로 창을 클릭했을 때도 '최근 본 상품'을 강제로 즉시 업데이트 합니다!
     window.addEventListener("focus", loadLocalData);
     window.addEventListener("popstate", loadLocalData);
     
@@ -118,9 +117,9 @@ export default function Home() {
   const categories = ["전체", "베스트", "낚싯대", "릴", "채비/소품"];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans pb-20 md:pb-0 relative">
+    <div className="min-h-screen bg-gray-50 font-sans pb-20 lg:pb-0 relative">
       
-      {/* 🌟 [수정됨] 화면이 조금 작아도 무조건 날개가 나오게 md:block 으로 바꾸고, z-index를 9999로 최상단으로 끌어올렸습니다! */}
+      {/* 🌟 최근 본 상품 날개 배너 */}
       {recentViews.length > 0 && (
         <div className="hidden md:block fixed right-4 lg:right-6 top-1/2 -translate-y-1/2 w-24 lg:w-28 bg-white border border-gray-200 rounded-xl shadow-2xl z-[9999] overflow-hidden">
           <div className="bg-blue-600 text-white text-[10px] font-bold text-center py-2">
@@ -150,7 +149,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* --- 기존 헤더 유지 --- */}
+      {/* 헤더 */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-between items-center py-4 border-b border-gray-100 gap-4">
@@ -169,11 +168,23 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
+            
             <div className="hidden lg:flex items-center space-x-3 text-sm font-semibold text-gray-500 whitespace-nowrap order-2 lg:order-none">
               {user ? (
                 <>
                   <span className="text-blue-600 font-bold max-w-[150px] truncate" title={user.email}>{user.user_metadata?.name ? `${user.user_metadata.name}님` : `${user.email}님`}</span>
                   <span className="text-gray-300">|</span>
+                  
+                  {/* 🌟 사장님(관리자) 이메일일 때만 보이는 '관리자 페이지' 버튼 */}
+                  {ADMIN_EMAILS.includes(user.email) && (
+                    <>
+                      <a href="/admin" className="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-full font-black transition flex items-center gap-1">
+                        <span>👑</span> 관리자
+                      </a>
+                      <span className="text-gray-300">|</span>
+                    </>
+                  )}
+
                   <a href="/mypage" className="hover:text-blue-600 transition font-bold text-gray-700">마이페이지</a>
                   <button onClick={handleLogout} className="hover:text-red-600 transition cursor-pointer">로그아웃</button>
                 </>
@@ -194,7 +205,17 @@ export default function Home() {
           <div className="py-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
             <nav className="flex space-x-6 md:space-x-8 font-semibold text-gray-600 text-base px-2">
               {categories.map((cat) => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`transition py-2 ${selectedCategory === cat ? "text-blue-600 font-black border-b-2 border-blue-600" : "hover:text-blue-600"}`}>
+                <button 
+                  key={cat} 
+                  onClick={() => {
+                    if (cat === "전체" || cat === "베스트") {
+                      setSelectedCategory(cat);
+                    } else {
+                      window.location.href = `/category/${cat}`;
+                    }
+                  }} 
+                  className={`transition py-2 ${selectedCategory === cat ? "text-blue-600 font-black border-b-2 border-blue-600" : "hover:text-blue-600"}`}
+                >
                   {cat}
                 </button>
               ))}
@@ -261,10 +282,21 @@ export default function Home() {
         )}
       </main>
 
+      {/* 모바일 하단바 */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-50 shadow-[0_-5px_10px_-5px_rgba(0,0,0,0.1)] pb-safe">
         <a href="/" className="flex flex-col items-center text-blue-600 p-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg><span className="text-[10px] font-bold">홈</span></a>
+        
         <a href="/cart" className="flex flex-col items-center text-gray-400 hover:text-blue-600 p-2 relative"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>{cartCount > 0 && <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{cartCount}</span>}<span className="text-[10px] font-bold">장바구니</span></a>
+        
         <a href="/mypage" className="flex flex-col items-center text-gray-400 hover:text-blue-600 p-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg><span className="text-[10px] font-bold">마이페이지</span></a>
+
+        {/* 🌟 모바일에서도 관리자 계정이면 버튼 표시! */}
+        {user && ADMIN_EMAILS.includes(user.email) && (
+          <a href="/admin" className="flex flex-col items-center text-red-500 hover:text-red-700 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1"><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.827M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+            <span className="text-[10px] font-bold">관리자</span>
+          </a>
+        )}
       </div>
     </div>
   );

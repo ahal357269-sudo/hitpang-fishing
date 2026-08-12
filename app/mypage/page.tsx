@@ -11,10 +11,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export default function MyPage() {
   const [userName, setUserName] = useState("고객");
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🌟 내 주문 내역을 담을 새로운 주머니입니다!
+  const [orders, setOrders] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndOrders = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -23,13 +26,24 @@ export default function MyPage() {
         return;
       }
       
-      // 저장해둔 이름을 불러옵니다. 없으면 이메일 앞부분을 씁니다.
       const name = session.user.user_metadata?.name || session.user.email?.split('@')[0];
       setUserName(name);
+
+      // 🌟 내 주문 내역만 쏙 골라오기 (user_email이 내 이메일과 같은 것만!)
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("user_email", session.user.email)
+        .order("created_at", { ascending: false }); // 최신 주문이 위로 오게 정렬
+
+      if (orderData) {
+        setOrders(orderData);
+      }
+      
       setIsLoading(false);
     };
 
-    fetchUser();
+    fetchUserAndOrders();
   }, [router]);
 
   if (isLoading) {
@@ -39,7 +53,6 @@ export default function MyPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800">
       
-      {/* 1. 상단 심플 헤더 (메인으로 돌아가기 용도) */}
       <header className="border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center space-x-2 text-sm text-gray-500">
           <a href="/" className="hover:text-blue-600 font-bold">🏠 홈</a>
@@ -48,13 +61,9 @@ export default function MyPage() {
         </div>
       </header>
 
-      {/* 2. 메인 레이아웃 (좌측 메뉴 + 우측 컨텐츠) */}
       <main className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
         
-        {/* ================= 좌측 사이드바 메뉴 ================= */}
         <aside className="w-full md:w-56 flex-shrink-0">
-          
-          {/* 기획전 메뉴 */}
           <div className="border border-gray-300 mb-6">
             <div className="bg-zinc-800 text-white font-bold text-center py-3">
               히트팡 기획전 ▼
@@ -69,12 +78,9 @@ export default function MyPage() {
             </ul>
           </div>
 
-          {/* 마이페이지 세부 메뉴들 */}
           <div className="space-y-6 text-sm">
             <div>
-              <h3 className="font-bold text-base mb-3 border-b border-gray-200 pb-2 flex justify-between">
-                주문관리 <span className="text-gray-400">^</span>
-              </h3>
+              <h3 className="font-bold text-base mb-3 border-b border-gray-200 pb-2 flex justify-between">주문관리 <span className="text-gray-400">^</span></h3>
               <ul className="space-y-2 text-gray-600">
                 <li className="hover:text-black cursor-pointer font-semibold">주문/배송 조회</li>
                 <li className="hover:text-black cursor-pointer">취소/교환/반품 내역</li>
@@ -82,38 +88,18 @@ export default function MyPage() {
                 <li className="text-blue-600 hover:underline cursor-pointer mt-2">A/S 센터</li>
               </ul>
             </div>
-
             <div>
-              <h3 className="font-bold text-base mb-3 border-b border-gray-200 pb-2 flex justify-between">
-                쇼핑 통장관리 <span className="text-gray-400">^</span>
-              </h3>
+              <h3 className="font-bold text-base mb-3 border-b border-gray-200 pb-2 flex justify-between">쇼핑 통장관리 <span className="text-gray-400">^</span></h3>
               <ul className="space-y-2 text-gray-600">
                 <li className="hover:text-black cursor-pointer">적립금 관리</li>
                 <li className="hover:text-black cursor-pointer">쿠폰 조회</li>
               </ul>
             </div>
-
-            <div>
-              <h3 className="font-bold text-base mb-3 border-b border-gray-200 pb-2 flex justify-between">
-                활동관리 <span className="text-gray-400">^</span>
-              </h3>
-              <ul className="space-y-2 text-gray-600">
-                <li className="hover:text-black cursor-pointer">회원 등급별 혜택</li>
-                <li className="hover:text-black cursor-pointer">위시리스트</li>
-                <li className="hover:text-black cursor-pointer">최근 본 상품</li>
-                <li className="hover:text-black cursor-pointer">나의 상품평</li>
-                <li className="hover:text-black cursor-pointer">상품문의</li>
-              </ul>
-            </div>
           </div>
         </aside>
 
-        {/* ================= 우측 메인 컨텐츠 ================= */}
         <div className="flex-1">
-          
-          {/* 상단 요약 현황판 (사진 참고) */}
           <div className="border border-gray-200 flex flex-col lg:flex-row mb-10">
-            {/* 등급 영역 */}
             <div className="bg-gray-100 p-8 flex flex-col items-center justify-center lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200">
               <h2 className="text-2xl font-black text-blue-900 tracking-wider mb-4">마이페이지</h2>
               <div className="w-16 h-16 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold text-lg mb-3 shadow-md border-2 border-yellow-400">
@@ -128,14 +114,14 @@ export default function MyPage() {
               </button>
             </div>
 
-            {/* 주문/쿠폰/적립금 영역 */}
             <div className="flex-1 flex items-center justify-around p-8 bg-white">
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
                 </div>
                 <span className="text-gray-500 text-sm">주문·배송</span>
-                <span className="text-3xl font-light">0</span>
+                {/* 🌟 0건이었던 자리에 내 주문 횟수를 띄웁니다! */}
+                <span className="text-3xl font-light text-blue-600 font-bold">{orders.length}</span>
               </div>
               <div className="h-16 border-r border-gray-200"></div>
               <div className="flex flex-col items-center">
@@ -156,70 +142,67 @@ export default function MyPage() {
             </div>
           </div>
 
-          {/* 배송 현황 플로우 */}
-          <div className="border border-gray-200 p-8 mb-12 flex justify-between items-center relative">
-            {/* 진행 단계 */}
-            <div className="flex-1 flex justify-between px-4 z-10">
-              {['입금대기', '결제완료', '배송준비중', '배송중', '배송완료'].map((step, idx) => (
-                <div key={idx} className="flex flex-col items-center bg-white px-2">
-                  <div className="w-12 h-12 mb-3 text-blue-900 flex items-center justify-center border-2 border-blue-900 rounded-lg shadow-sm">
-                    {/* 아이콘 대체용 (실제로는 이미지나 SVG 적용) */}
-                    <span className="text-xl font-black">{idx + 1}</span>
-                  </div>
-                  <span className="text-gray-700 font-bold mb-1">{step}</span>
-                  <span className="text-gray-500 text-sm">0건</span>
-                </div>
-              ))}
-            </div>
-            {/* 뒷배경 선 */}
-            <div className="absolute top-14 left-16 right-[30%] h-0.5 bg-gray-200 z-0"></div>
-
-            {/* 취소/교환/반품 우측 박스 */}
-            <div className="border-l border-gray-200 pl-8 ml-4 min-w-[120px]">
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li className="flex justify-between"><span>✕ 취소</span> <span className="font-bold">0건</span></li>
-                <li className="flex justify-between"><span>⇄ 교환</span> <span className="font-bold">0건</span></li>
-                <li className="flex justify-between"><span>↺ 반품</span> <span className="font-bold">0건</span></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* 최근 주문 내역 */}
           <div>
             <div className="flex justify-between items-end mb-3">
               <h3 className="text-xl font-bold text-gray-800">최근 주문내역</h3>
               <div className="text-right">
                 <p className="text-xs text-gray-500 mb-1">회원등급과 적립금은 구매확정을 눌러주시면 적용됩니다.</p>
-                <p className="text-xs text-gray-500">주문내역 수정을 원하시는 경우 전체 취소 후 장바구니에서 복구된 내역을 수정해 다시 주문해주시기 바랍니다. <button className="border border-gray-300 px-2 py-0.5 ml-1 hover:bg-gray-50 text-black">전체보기</button></p>
               </div>
             </div>
 
-            {/* 네이버페이 안내 띠배너 */}
             <div className="bg-[#00c73c] text-white text-sm text-right py-2 px-4 mb-4">
               * 네이버페이로 주문한 주문건은 [네이버 &gt; 네이버페이 &gt; 결제내역]에서 확인 가능하십니다.
             </div>
 
-            {/* 내역 리스트 (데이터 없음) */}
-            <div className="border-t-2 border-b border-gray-800 py-24 text-center text-gray-500 text-sm bg-gray-50/50">
-              주문 조회내역이 없습니다.
-            </div>
-          </div>
+            {/* 🌟 주문 내역 리스트 뿌려주기! */}
+            {orders.length === 0 ? (
+              <div className="border-t-2 border-b border-gray-800 py-24 text-center text-gray-500 text-sm bg-gray-50/50">
+                주문 조회내역이 없습니다.
+              </div>
+            ) : (
+              <div className="border-t-2 border-gray-800">
+                {orders.map((order, orderIdx) => (
+                  <div key={orderIdx} className="border-b border-gray-200 bg-white py-6 px-6 shadow-sm mb-4 mt-4 rounded-b-lg">
+                    
+                    {/* 주문 날짜와 상태 */}
+                    <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                      <span className="font-bold text-gray-700">
+                        주문일자: {new Date(order.created_at).toLocaleDateString()}
+                      </span>
+                      <span className="text-blue-700 font-bold bg-blue-50 border border-blue-100 px-3 py-1 rounded-full text-sm">
+                        {order.status}
+                      </span>
+                    </div>
 
-        </div>
+                    {/* 주문한 상품들 목록 */}
+                    <div className="space-y-4">
+                      {order.items.map((item: any, itemIdx: number) => (
+                        <div key={itemIdx} className="flex items-center gap-4">
+                          <div className="w-20 h-20 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden flex-shrink-0">
+                            {item.image_url ? (
+                              <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">이미지</div>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-blue-600">{item.category}</span>
+                            <p className="font-bold text-gray-900 mt-1">{item.name}</p>
+                            <p className="text-gray-500 text-sm mt-1">{item.price}원</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-        {/* ================= 우측 플로팅 배너 (최근 본 상품) ================= */}
-        <div className="hidden xl:block fixed right-10 top-32 w-24 border border-gray-200 bg-white shadow-sm text-center">
-          <div className="p-2 border-b border-gray-200">
-            <p className="text-xs text-gray-500 mb-1">최근 본 상품</p>
-            <p className="font-bold text-red-500">0</p>
-          </div>
-          <div className="p-4 text-xs text-gray-400 py-10">
-            최근에 본 상품이<br/>없습니다.
-          </div>
-          <div className="p-2 border-t border-gray-200 flex justify-center">
-             <button className="border border-gray-300 p-1 hover:bg-gray-50">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
-             </button>
+                    {/* 총 결제 금액 */}
+                    <div className="text-right mt-6 pt-4 border-t border-gray-100">
+                      <span className="text-sm text-gray-500 mr-4">총 결제금액</span>
+                      <span className="text-2xl font-black text-red-600">{order.total_amount?.toLocaleString()}원</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

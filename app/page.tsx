@@ -10,6 +10,9 @@ export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [cartCount, setCartCount] = useState(0);
+  
+  const [selectedCategory, setSelectedCategory] = useState("전체");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchProductsSafely = async () => {
@@ -19,9 +22,7 @@ export default function Home() {
 
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-      }
+      if (session) setUser(session.user);
     };
 
     const loadCartCount = () => {
@@ -29,11 +30,8 @@ export default function Home() {
         const existingCart = localStorage.getItem("hitpang_cart");
         if (existingCart) {
           const cartArray = JSON.parse(existingCart);
-          if (Array.isArray(cartArray)) {
-            setCartCount(cartArray.length);
-          } else {
-            localStorage.removeItem("hitpang_cart"); // 데이터가 꼬여있으면 삭제
-          }
+          if (Array.isArray(cartArray)) setCartCount(cartArray.length);
+          else localStorage.removeItem("hitpang_cart");
         }
       } catch (error) {
         localStorage.removeItem("hitpang_cart");
@@ -51,18 +49,11 @@ export default function Home() {
     alert("안전하게 로그아웃 되었습니다.");
   };
 
-  // 🌟 강력해진 무적의 장바구니 담기 기능! (에러 시 자동 초기화)
   const addToCart = (product: any) => {
     try {
       const existingCart = localStorage.getItem("hitpang_cart");
-      let cartArray = [];
-      
-      if (existingCart) {
-        cartArray = JSON.parse(existingCart);
-        if (!Array.isArray(cartArray)) {
-          cartArray = []; // 배열이 아니면 깡통으로 만듦
-        }
-      }
+      let cartArray = existingCart ? JSON.parse(existingCart) : [];
+      if (!Array.isArray(cartArray)) cartArray = [];
 
       cartArray.push(product);
       localStorage.setItem("hitpang_cart", JSON.stringify(cartArray));
@@ -70,8 +61,6 @@ export default function Home() {
       alert(`[${product.name}] 상품이 장바구니에 담겼습니다! 🛒`);
       
     } catch (error) {
-      // 브라우저 기억장치가 완전히 꼬였을 경우, 싹 비우고 새로 담습니다!
-      console.log("장바구니 데이터 초기화 후 다시 담습니다.");
       const newCart = [product];
       localStorage.setItem("hitpang_cart", JSON.stringify(newCart));
       setCartCount(1);
@@ -79,87 +68,144 @@ export default function Home() {
     }
   };
 
+  const filteredProducts = products.filter((product) => {
+    let categoryMatch = false;
+    if (selectedCategory === "전체" || selectedCategory === "베스트") categoryMatch = true;
+    else if (selectedCategory === "채비/소품") {
+      categoryMatch = product.category.includes("채비") || product.category.includes("소품");
+    } else {
+      categoryMatch = product.category.includes(selectedCategory);
+    }
+    const searchMatch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return categoryMatch && searchMatch;
+  });
+
+  const categories = ["전체", "베스트", "낚싯대", "릴", "채비/소품"];
+
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    // 🌟 모바일 하단 바를 위해 pb-20(하단 여백)을 추가했습니다
+    <div className="min-h-screen bg-gray-50 font-sans pb-20 md:pb-0">
       
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer">
-            HITPANG<span className="text-gray-800">FISHING</span>
-          </a>
+      <header className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <nav className="hidden md:flex space-x-8 font-semibold text-gray-600">
-            <a href="#" className="hover:text-blue-600 transition">베스트</a>
-            <a href="#" className="hover:text-blue-600 transition">낚싯대</a>
-            <a href="#" className="hover:text-blue-600 transition">릴</a>
-            <a href="#" className="hover:text-blue-600 transition">채비/소품</a>
-          </nav>
-          
-          <div className="flex items-center space-x-4 md:space-x-5">
-            {user ? (
-              <div className="hidden sm:flex items-center space-x-4 text-sm font-semibold text-gray-500">
-                <span className="text-blue-600 font-bold">
-                  {user.user_metadata?.name ? `${user.user_metadata.name}님` : `${user.email}님`}
-                </span>
-                <span className="text-gray-300">|</span>
-                <a href="/mypage" className="hover:text-blue-600 transition font-bold text-gray-700">마이페이지</a>
-                <button onClick={handleLogout} className="hover:text-red-600 transition cursor-pointer">로그아웃</button>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center space-x-4 text-sm font-semibold text-gray-500">
-                <a href="/login" className="hover:text-blue-600 transition">로그인</a>
-                <a href="/signup" className="hover:text-blue-600 transition">회원가입</a>
-                <span className="text-gray-300">|</span>
-                <a href="/mypage" className="hover:text-blue-600 transition">마이페이지</a>
-              </div>
-            )}
+          {/* 1층: 로고와 검색창, 마이페이지, 장바구니 */}
+          <div className="flex flex-wrap justify-between items-center py-4 border-b border-gray-100 gap-4">
             
-            <a href="/cart" className="bg-blue-600 text-white px-5 py-2.5 rounded-full font-bold hover:bg-blue-700 transition flex items-center space-x-2 shadow-sm cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-              <span>장바구니 ({cartCount})</span>
+            <a href="/" className="text-2xl font-black text-blue-600 tracking-tighter cursor-pointer whitespace-nowrap">
+              HITPANG<span className="text-gray-800">FISHING</span>
             </a>
+            
+            {/* 🌟 모바일에서도 꽉 차게 보이는 검색창! */}
+            <div className="relative w-full order-3 lg:order-none lg:w-auto lg:flex-1 max-w-xl">
+              <input 
+                type="text" 
+                placeholder="어떤 상품을 찾으시나요?" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full border border-gray-300 rounded-full py-2.5 px-4 pl-11 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-sm bg-gray-50 transition-all"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            {/* PC 전용 우측 메뉴 (모바일에서는 숨김) */}
+            <div className="hidden lg:flex items-center space-x-3 text-sm font-semibold text-gray-500 whitespace-nowrap order-2 lg:order-none">
+              {user ? (
+                <>
+                  <span className="text-blue-600 font-bold max-w-[150px] truncate" title={user.email}>
+                    {user.user_metadata?.name ? `${user.user_metadata.name}님` : `${user.email}님`}
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <a href="/mypage" className="hover:text-blue-600 transition font-bold text-gray-700">마이페이지</a>
+                  <button onClick={handleLogout} className="hover:text-red-600 transition cursor-pointer">로그아웃</button>
+                </>
+              ) : (
+                <>
+                  <a href="/login" className="hover:text-blue-600 transition">로그인</a>
+                  <a href="/signup" className="hover:text-blue-600 transition">회원가입</a>
+                  <span className="text-gray-300">|</span>
+                  <a href="/mypage" className="hover:text-blue-600 transition">마이페이지</a>
+                </>
+              )}
+              
+              <a href="/cart" className="ml-4 bg-blue-600 text-white px-5 py-2.5 rounded-full font-bold hover:bg-blue-700 transition flex items-center space-x-2 shadow-sm cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                </svg>
+                <span>장바구니 ({cartCount})</span>
+              </a>
+            </div>
           </div>
+
+          {/* 2층: 모바일에서 손가락으로 가로 스크롤이 되는 카테고리 메뉴! */}
+          <div className="py-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
+            <nav className="flex space-x-6 md:space-x-8 font-semibold text-gray-600 text-base px-2">
+              {categories.map((cat) => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`transition py-2 ${
+                    selectedCategory === cat 
+                    ? "text-blue-600 font-black border-b-2 border-blue-600" 
+                    : "hover:text-blue-600"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </nav>
+          </div>
+          
         </div>
       </header>
 
-      <div className="bg-zinc-900 text-white py-20 px-4 text-center">
-        <h1 className="text-4xl md:text-6xl font-black mb-4">프리미엄 낚시의 모든 것</h1>
-        <p className="text-xl text-gray-400 mb-8">히트팡피싱에서 당신의 런커를 준비하세요.</p>
+      <div className="bg-zinc-900 text-white py-16 md:py-20 px-4 text-center">
+        <h1 className="text-3xl md:text-6xl font-black mb-4">프리미엄 낚시의 모든 것</h1>
+        <p className="text-sm md:text-xl text-gray-400 md:mb-8">히트팡피싱에서 당신의 런커를 준비하세요.</p>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex justify-between items-end mb-8 border-b pb-4">
-          <h2 className="text-3xl font-bold text-gray-900">🔥 신규 입고 상품</h2>
-          <span className="text-gray-500 font-medium">총 {products.length}개의 상품</span>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div className="flex justify-between items-end mb-6 border-b pb-3">
+          <h2 className="text-xl md:text-3xl font-bold text-gray-900">
+            {searchQuery 
+              ? `🔍 '${searchQuery}' 검색 결과` 
+              : (selectedCategory === "전체" ? "🔥 신규 입고 상품" : `🎯 ${selectedCategory} 추천 상품`)}
+          </h2>
+          <span className="text-xs md:text-sm text-gray-500 font-medium">총 {filteredProducts.length}개</span>
         </div>
 
-        {products.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 text-lg">
-            아직 진열된 상품이 없습니다. <br/>관리자 페이지에서 첫 상품을 등록해 보세요!
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-20 md:py-32 text-gray-500">
+            <span className="text-4xl mb-4 block">🎣</span>
+            <p className="font-bold">조건에 맞는 상품을 찾을 수 없습니다.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {products.map((product, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden group cursor-pointer border border-gray-100">
-                <div className="aspect-square bg-gray-100 overflow-hidden relative">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">이미지 준비중</div>
-                  )}
-                  <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-blue-700 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                    {product.category}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                  <div className="flex justify-between items-center mt-4">
-                    <span className="text-xl font-black text-red-600">{product.price}원</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+            {filteredProducts.map((product, index) => (
+              <div key={index} className="bg-white rounded-xl md:rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden group cursor-pointer border border-gray-100 flex flex-col">
+                <a href={`/product/${product.id}`} className="block flex-1">
+                  <div className="aspect-square bg-gray-100 overflow-hidden relative">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">이미지</div>
+                    )}
+                    <span className="absolute top-2 left-2 bg-white/90 text-blue-700 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                      {product.category}
+                    </span>
+                  </div>
+                  <div className="p-3 md:p-5 pb-0">
+                    <h3 className="text-sm md:text-lg font-bold text-gray-900 mb-1 line-clamp-2 leading-tight">{product.name}</h3>
+                  </div>
+                </a>
+                <div className="p-3 md:p-5 pt-2 mt-auto">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mt-1">
+                    <span className="text-base md:text-xl font-black text-red-600">{product.price}원</span>
                     <button 
                       onClick={() => addToCart(product)} 
-                      className="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg font-bold transition"
+                      className="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-bold transition w-full md:w-auto text-center"
                     >
                       담기
                     </button>
@@ -171,11 +217,29 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-gray-200 mt-20 py-10">
-        <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© 2026 히트팡피싱 (HITPANG FISHING). All rights reserved.</p>
-        </div>
-      </footer>
+      {/* 🌟 모바일 전용 고정 하단 네비게이션 바 (앱 느낌 물씬!) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-50 shadow-[0_-5px_10px_-5px_rgba(0,0,0,0.1)] pb-safe">
+        <a href="/" className="flex flex-col items-center text-blue-600 p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+          <span className="text-[10px] font-bold">홈</span>
+        </a>
+        <a href="/cart" className="flex flex-col items-center text-gray-400 hover:text-blue-600 p-2 relative">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+          </svg>
+          {cartCount > 0 && <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{cartCount}</span>}
+          <span className="text-[10px] font-bold">장바구니</span>
+        </a>
+        <a href="/mypage" className="flex flex-col items-center text-gray-400 hover:text-blue-600 p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mb-1">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          <span className="text-[10px] font-bold">마이페이지</span>
+        </a>
+      </div>
+
     </div>
   );
 }
